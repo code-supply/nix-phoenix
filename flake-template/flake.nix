@@ -29,9 +29,5 @@
             };
         }
       );
-
-      templates.default = {
-        path = ./flake-template;
-      };
     };
 }
