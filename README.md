@@ -74,3 +74,7 @@ RELEASE_COOKIE=asdf \
 SECRET_KEY_BASE="$(mix phx.gen.secret)" \
 ./result/bin/my_new_project start
 ```
+
+### Visit the site
+
+Open a browser at http://localhost:4000/ to see your released site.
