@@ -61,6 +61,7 @@ nix build --print-build-logs # short option is -L
 ```shell
 DATABASE_URL=ecto://postgres:postgres@localhost/my_new_project \
 MIX_ENV=prod \
+SECRET_KEY_BASE="$(mix phx.gen.secret)" \
 mix ecto.create
 ```
 
