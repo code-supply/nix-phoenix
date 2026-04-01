@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
   };
 
   outputs =
@@ -8,62 +8,71 @@
     let
       forAllSystems =
         generate:
-        nixpkgs.lib.genAttrs [
-          "aarch64-darwin"
-          "x86_64-darwin"
-          "aarch64-linux"
-          "x86_64-linux"
-        ] (system: generate { pkgs = import nixpkgs { inherit system; }; });
+        nixpkgs.lib.genAttrs
+          [
+            "aarch64-darwin"
+            "x86_64-darwin"
+            "aarch64-linux"
+            "x86_64-linux"
+          ]
+          (
+            system:
+            generate (
+              let
+                pkgs = import nixpkgs { inherit system; };
+              in
+              {
+                inherit pkgs;
+                beamPackages = pkgs.beam29Packages.extend (_: prev: { elixir = prev.elixir_1_20; });
+              }
+            )
+          );
     in
     {
       devShells = forAllSystems (
-        { pkgs, ... }:
+        { pkgs, beamPackages, ... }:
         {
-          default =
-            with pkgs;
-            mkShell {
-              packages = [
-                elixir
-                elixir-ls
-              ];
-            };
+          default = pkgs.mkShell {
+            packages = [
+              beamPackages.elixir
+              beamPackages.elixir-ls
+            ];
+          };
         }
       );
 
       packages = forAllSystems (
-        { pkgs, ... }:
+        { pkgs, beamPackages, ... }:
         let
-          mixNixDeps = pkgs.callPackages ./deps.nix { };
+          mixNixDeps = pkgs.callPackages ./deps.nix { inherit beamPackages; };
         in
         {
-          default =
-            with pkgs;
-            beamPackages.mixRelease {
-              inherit mixNixDeps;
-              pname = "my_phoenix_app";
-              src = ./.;
-              version = "0.0.0";
+          default = beamPackages.mixRelease {
+            inherit mixNixDeps;
+            pname = "my_phoenix_app";
+            src = ./.;
+            version = "0.0.0";
 
-              DATABASE_URL = "";
-              SECRET_KEY_BASE = "";
+            DATABASE_URL = "";
+            SECRET_KEY_BASE = "";
 
-              postBuild = ''
-                tailwind_path="$(mix do \
-                  app.config --no-deps-check --no-compile, \
-                  eval 'Tailwind.bin_path() |> IO.puts()')"
-                esbuild_path="$(mix do \
-                  app.config --no-deps-check --no-compile, \
-                  eval 'Esbuild.bin_path() |> IO.puts()')"
+            postBuild = ''
+              tailwind_path="$(mix do \
+                app.config --no-deps-check --no-compile, \
+                eval 'Tailwind.bin_path() |> IO.puts()')"
+              esbuild_path="$(mix do \
+                app.config --no-deps-check --no-compile, \
+                eval 'Esbuild.bin_path() |> IO.puts()')"
 
-                ln -sfv ${tailwindcss}/bin/tailwindcss "$tailwind_path"
-                ln -sfv ${esbuild}/bin/esbuild "$esbuild_path"
-                ln -sfv ${mixNixDeps.heroicons} deps/heroicons
+              ln -sfv ${pkgs.tailwindcss}/bin/tailwindcss "$tailwind_path"
+              ln -sfv ${pkgs.esbuild}/bin/esbuild "$esbuild_path"
+              ln -sfv ${pkgs.mixNixDeps.heroicons} deps/heroicons
 
-                mix do \
-                  app.config --no-deps-check --no-compile, \
-                  assets.deploy --no-deps-check
-              '';
-            };
+              mix do \
+                app.config --no-deps-check --no-compile, \
+                assets.deploy --no-deps-check
+            '';
+          };
         }
       );
     };

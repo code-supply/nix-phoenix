@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
   };
 
   outputs =
@@ -8,25 +8,37 @@
     let
       forAllSystems =
         generate:
-        nixpkgs.lib.genAttrs [
-          "aarch64-darwin"
-          "x86_64-darwin"
-          "aarch64-linux"
-          "x86_64-linux"
-        ] (system: generate { pkgs = import nixpkgs { inherit system; }; });
+        nixpkgs.lib.genAttrs
+          [
+            "aarch64-darwin"
+            "x86_64-darwin"
+            "aarch64-linux"
+            "x86_64-linux"
+          ]
+          (
+            system:
+            generate (
+              let
+                pkgs = import nixpkgs { inherit system; };
+              in
+              {
+                inherit pkgs;
+                beamPackages = pkgs.beam29Packages.extend (_: prev: { elixir = prev.elixir_1_20; });
+              }
+            )
+          );
+
     in
     {
       devShells = forAllSystems (
-        { pkgs, ... }:
+        { pkgs, beamPackages, ... }:
         {
-          default =
-            with pkgs;
-            mkShell {
-              packages = [
-                elixir
-                elixir-ls
-              ];
-            };
+          default = pkgs.mkShell {
+            packages = [
+              beamPackages.elixir
+              beamPackages.elixir-ls
+            ];
+          };
         }
       );
 
