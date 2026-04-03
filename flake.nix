@@ -23,7 +23,12 @@
               in
               {
                 inherit pkgs;
-                beamPackages = pkgs.beam29Packages.extend (_: prev: { elixir = prev.elixir_1_20; });
+                beamPackages = pkgs.beam29Packages.extend (
+                  _: prev: {
+                    elixir = prev.elixir_1_20;
+                    elixir-ls = prev.elixir-ls.override { elixir = prev.elixir_1_20; };
+                  }
+                );
               }
             )
           );
